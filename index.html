@@ -416,8 +416,7 @@
   var state = {
     names: TEAM_NAMES.slice(),
     scores: TEAM_NAMES.map(function () { return 0; }),
-    used: {},
-    sig: "" // fingerprint of the questions the "used" tiles belong to
+    used: {} // tiles already played, remembered by "CATEGORY NAME|POINTS"
   };
   var nameEls = [];
   var scoreEls = [];
@@ -442,7 +441,6 @@
         state.scores = s.scores.map(function (n) { return Math.max(0, Number(n) || 0); });
       }
       if (s.used && typeof s.used === "object") state.used = s.used;
-      if (typeof s.sig === "string") state.sig = s.sig;
     } catch (e) { /* storage unavailable: just start fresh */ }
   }
   function save() {
@@ -589,7 +587,9 @@
 
     POINTS.forEach(function (pts, r) {
       CATEGORIES.forEach(function (cat, c) {
-        var key = c + "-" + r;
+        // Key = category name + points, so played tiles stay grey after a refresh
+        // even if the question text in the sheet changes.
+        var key = cat.name + "|" + pts;
         var btn = document.createElement("button");
         btn.type = "button";
         btn.className = "tile";
@@ -672,7 +672,7 @@
   // Sheet columns: Category | Points | Question | Answer   (one row per tile)
   function parseCSV(text) {
     var rows = [], row = [], cell = "", inQ = false;
-    text = text.replace(/^﻿/, "");
+    text = text.replace(/^\uFEFF/, "");
     for (var i = 0; i < text.length; i++) {
       var ch = text.charAt(i);
       if (inQ) {
@@ -739,13 +739,6 @@
       });
   }
 
-  // fingerprint of the question set, so tiles used with OLD questions are cleared
-  function signature(cats) {
-    var s = JSON.stringify(cats), h = 0;
-    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-    return String(h);
-  }
-
   function showNotice(msg) {
     var n = $("notice");
     n.textContent = msg;
@@ -764,10 +757,6 @@
   if (QUESTIONS_SHEET_URL) showNotice("LOADING QUESTIONS...");
   loadQuestions().then(function (result) {
     CATEGORIES = result.cats;
-    if (!result.failed) {
-      var sig = signature(CATEGORIES);
-      if (state.sig !== sig) { state.used = {}; state.sig = sig; save(); }
-    }
     buildBoard();
     if (result.notice) showNotice(result.notice); else hideNotice();
   });
