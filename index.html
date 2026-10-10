@@ -155,6 +155,16 @@
   .round:hover { background: #ffb36b; }
   .round:active { transform: translate(2px, 2px); box-shadow: none; }
 
+  /* ---------- status message ---------- */
+  .notice {
+    margin: 18px 0 0;
+    text-align: center;
+    font-size: 10px;
+    line-height: 1.8;
+    color: var(--yellow);
+  }
+  .notice[hidden] { display: none; }
+
   /* ---------- board ---------- */
   .board {
     display: grid;
@@ -283,6 +293,7 @@
     <p class="subtitle" id="subtitle"></p>
 
     <div class="teams" id="teams"></div>
+    <div class="notice" id="notice" hidden></div>
     <div class="board" id="board"></div>
   </div>
 
@@ -331,7 +342,12 @@
   // Example: "https://yourname.my.canva.site/punishments"
   const PUNISHMENT_URL = "https://sf10.my.canva.site/pilipinas-game-ka-na-ba/page-5-2";
 
-  const CATEGORIES = [
+  // OPTIONAL: load the questions from a Google Sheet so anyone can edit them
+  // without touching this file. Paste the sheet's "Publish to web" CSV link here.
+  // Leave it empty ("") to use the built-in questions below.
+  const QUESTIONS_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFZbee28tHrcu3kbZ2kLeuf61W0Rtwebi3SMTyMZ-YJ8UXUoGBL0ru4ybrOBRFN-8A7ZPO-PFUSh1x/pubhtml";
+
+  const BUILTIN_CATEGORIES = [
     {
       name: "PANINIWALA",
       questions: [
@@ -390,6 +406,8 @@
   ];
   /* ===================== end of editable part ===================== */
 
+  var CATEGORIES = BUILTIN_CATEGORIES; // replaced by the Google Sheet questions when a sheet link is set
+
   var TEAM_CLASSES = ["red", "green", "blue", "yellow"];
   var STEP = 100;
   var STORAGE_KEY = "skaspl1-jeopardy-v1";
@@ -398,7 +416,8 @@
   var state = {
     names: TEAM_NAMES.slice(),
     scores: TEAM_NAMES.map(function () { return 0; }),
-    used: {}
+    used: {},
+    sig: "" // fingerprint of the questions the "used" tiles belong to
   };
   var nameEls = [];
   var scoreEls = [];
@@ -423,6 +442,7 @@
         state.scores = s.scores.map(function (n) { return Math.max(0, Number(n) || 0); });
       }
       if (s.used && typeof s.used === "object") state.used = s.used;
+      if (typeof s.sig === "string") state.sig = s.sig;
     } catch (e) { /* storage unavailable: just start fresh */ }
   }
   function save() {
@@ -556,6 +576,8 @@
 
   function buildBoard() {
     var board = $("board");
+    board.innerHTML = "";
+    tileEls = {};
     board.style.gridTemplateColumns = "repeat(" + CATEGORIES.length + ", 1fr)";
 
     CATEGORIES.forEach(function (cat) {
@@ -646,6 +668,91 @@
   function openMenu() { $("mOverlay").classList.add("open"); }
   function closeMenu() { $("mOverlay").classList.remove("open"); }
 
+  /* ---------- questions from a Google Sheet (optional) ---------- */
+  // Sheet columns: Category | Points | Question | Answer   (one row per tile)
+  function parseCSV(text) {
+    var rows = [], row = [], cell = "", inQ = false;
+    text = text.replace(/^﻿/, "");
+    for (var i = 0; i < text.length; i++) {
+      var ch = text.charAt(i);
+      if (inQ) {
+        if (ch === '"') {
+          if (text.charAt(i + 1) === '"') { cell += '"'; i++; }
+          else inQ = false;
+        } else cell += ch;
+      } else if (ch === '"') {
+        inQ = true;
+      } else if (ch === ",") {
+        row.push(cell); cell = "";
+      } else if (ch === "\n" || ch === "\r") {
+        if (ch === "\r" && text.charAt(i + 1) === "\n") i++;
+        row.push(cell); cell = "";
+        rows.push(row); row = [];
+      } else cell += ch;
+    }
+    if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+    return rows;
+  }
+
+  function sheetToCategories(rows) {
+    var cats = [], index = Object.create(null);
+    rows.forEach(function (r) {
+      var name = (r[0] || "").trim();
+      var pts = parseInt((r[1] || "").replace(/[^0-9]/g, ""), 10);
+      var q = (r[2] || "").trim();
+      var a = (r[3] || "").trim();
+      if (!name || isNaN(pts)) return;        // skips the header row and blank rows
+      var ri = POINTS.indexOf(pts);
+      if (ri < 0) return;                     // only 100-600 are used
+      if (!(name in index)) {
+        index[name] = cats.length;
+        cats.push({
+          name: name,
+          questions: POINTS.map(function () { return ["(No question set)", "(No answer set)"]; })
+        });
+      }
+      cats[index[name]].questions[ri] = [q || "(No question set)", a || "(No answer set)"];
+    });
+    return cats;
+  }
+
+  function loadQuestions() {
+    if (!QUESTIONS_SHEET_URL) return Promise.resolve({ cats: BUILTIN_CATEGORIES });
+    var url = QUESTIONS_SHEET_URL + (QUESTIONS_SHEET_URL.indexOf("?") > -1 ? "&" : "?") + "_=" + Date.now();
+    return fetch(url, { cache: "no-store" })
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.text();
+      })
+      .then(function (text) {
+        var cats = sheetToCategories(parseCSV(text));
+        if (!cats.length) throw new Error("no questions found in the sheet");
+        return { cats: cats };
+      })
+      .catch(function (err) {
+        if (window.console) console.warn("Could not load the Google Sheet:", err);
+        return {
+          cats: BUILTIN_CATEGORIES,
+          failed: true,
+          notice: "COULD NOT LOAD THE GOOGLE SHEET. SHOWING THE BUILT-IN QUESTIONS."
+        };
+      });
+  }
+
+  // fingerprint of the question set, so tiles used with OLD questions are cleared
+  function signature(cats) {
+    var s = JSON.stringify(cats), h = 0;
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return String(h);
+  }
+
+  function showNotice(msg) {
+    var n = $("notice");
+    n.textContent = msg;
+    n.hidden = false;
+  }
+  function hideNotice() { $("notice").hidden = true; }
+
   /* ---------- start ---------- */
   load();
   $("title").textContent = TITLE;
@@ -653,7 +760,17 @@
   document.title = TITLE;
   buildHearts();
   buildTeams();
-  buildBoard();
+
+  if (QUESTIONS_SHEET_URL) showNotice("LOADING QUESTIONS...");
+  loadQuestions().then(function (result) {
+    CATEGORIES = result.cats;
+    if (!result.failed) {
+      var sig = signature(CATEGORIES);
+      if (state.sig !== sig) { state.used = {}; state.sig = sig; save(); }
+    }
+    buildBoard();
+    if (result.notice) showNotice(result.notice); else hideNotice();
+  });
 
   // PUNISHMENT button: opens the Canva page in a new tab (the game stays open here)
   var punishBtn = $("punishBtn");
