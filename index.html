@@ -1,129 +1,587 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://googleapis.com" rel="stylesheet">
-  <style>
-    html, body {
-      background: transparent !important;
-      background-color: transparent !important;
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-family: 'Press Start 2P', monospace;
-      image-rendering: pixelated;
-      overflow: hidden;
-    }
-    .scoreboard-container {
-      display: flex;
-      gap: 20px;
-      padding: 10px;
-      background: transparent !important;
-    }
-    .team-card {
-      width: 180px;
-      padding: 15px;
-      border-radius: 20px;
-      box-shadow: inset -4px -4px 0px rgba(0,0,0,0.2), 4px 4px 0px rgba(0,0,0,0.3);
-      position: relative;
-      color: white;
-    }
-    .card-red    { background-color: #f73c3c; }
-    .card-green  { background-color: #5ce694; }
-    .card-blue   { background-color: #5ca6f7; }
-    .card-yellow { background-color: #f2c93f; }
-    .team-header {
-      font-size: 11px;
-      border-bottom: 2px solid white;
-      padding-bottom: 8px;
-      margin-bottom: 12px;
-      letter-spacing: 1px;
-    }
-    .score {
-      font-size: 32px;
-      margin-left: 5px;
-      display: inline-block;
-    }
-    .button-group {
-      position: absolute;
-      bottom: 15px;
-      right: 15px;
-      display: flex;
-      gap: 8px;
-    }
-    .btn {
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      font-family: 'Press Start 2P', monospace;
-      font-size: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      border: 2px solid #573914;
-      box-shadow: inset -2px -2px 0px rgba(0,0,0,0.2);
-      padding: 0;
-    }
-    .btn-plus { background-color: #4bd693; color: #fff; }
-    .btn-minus { background-color: #f55b3b; color: #fff; }
-    .btn:active { transform: translateY(1px); box-shadow: none; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SKASPL1 Jeopardy</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #07072a;
+    --grid: rgba(70, 70, 200, 0.22);
+    --yellow: #ffe44d;
+    --cyan: #00d4ff;
+    --red: #cc0000;
+    --pixel: "Press Start 2P", "Courier New", monospace;
+    --text: "VT323", "Courier New", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh;
+    color: #fff;
+    font-family: var(--pixel);
+    background-color: var(--navy);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 12px 12px;
+  }
+  .app {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 14px 16px 48px;
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .hearts { display: flex; gap: 4px; }
+  .hearts svg { width: 26px; height: 24px; image-rendering: pixelated; }
+  .pills { display: flex; gap: 8px; }
+  .pill {
+    font-family: var(--pixel);
+    font-size: 10px;
+    padding: 6px 12px;
+    color: #8a2be2;
+    background: #ffd23f;
+    border: 3px solid #b8860b;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+  }
+  .pill:hover { filter: brightness(1.1); }
+  .pill:active { transform: translate(2px, 2px); box-shadow: none; }
+
+  /* ---------- title ---------- */
+  h1 {
+    margin: 18px 0 10px;
+    text-align: center;
+    font-family: var(--pixel);
+    font-weight: normal;
+    font-size: clamp(22px, 5.2vw, 52px);
+    letter-spacing: 2px;
+    color: var(--yellow);
+    text-shadow: 4px 4px 0 var(--cyan), 7px 7px 0 rgba(0, 0, 0, 0.5);
+  }
+  .subtitle {
+    text-align: center;
+    font-family: var(--text);
+    font-size: clamp(16px, 2.2vw, 22px);
+    margin: 0 0 24px;
+  }
+
+  /* ---------- team score cards ---------- */
+  .teams {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  .team {
+    padding: 10px 12px 12px;
+    border: 4px solid rgba(0, 0, 40, 0.7);
+    border-radius: 14px;
+    box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.6);
+  }
+  .team.red    { background: #ff4a4a; }
+  .team.green  { background: #6ee68a; }
+  .team.blue   { background: #5aa9f5; }
+  .team.yellow { background: #e8c53a; }
+  .team .tname {
+    font-size: clamp(7px, 1.1vw, 11px);
+    padding-bottom: 6px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.85);
+  }
+  .team .trow {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .score {
+    font-size: clamp(16px, 2.8vw, 28px);
+    text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+  }
+  .score.bump { animation: bump 0.25s ease; }
+  @keyframes bump {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+  .tbtns { display: flex; gap: 6px; flex-shrink: 0; }
+  .round {
+    width: clamp(24px, 3vw, 32px);
+    height: clamp(24px, 3vw, 32px);
+    padding: 0;
+    border-radius: 50%;
+    border: 3px solid #5a2e0e;
+    background: #f29a4a;
+    color: #5a2e0e;
+    font-family: var(--pixel);
+    font-size: clamp(11px, 1.5vw, 16px);
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+  }
+  .round:hover { background: #ffb36b; }
+  .round:active { transform: translate(2px, 2px); box-shadow: none; }
+
+  /* ---------- board ---------- */
+  .board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px 18px;
+    margin-top: 30px;
+  }
+  .cat {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 64px;
+    padding: 8px;
+    font-size: clamp(8px, 1.3vw, 13px);
+    line-height: 1.5;
+    background: #1565a8;
+    border: 3px solid #c8102e;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.6);
+    word-break: break-word;
+  }
+  .tile {
+    height: clamp(44px, 6.2vw, 62px);
+    font-family: var(--pixel);
+    font-size: clamp(14px, 2.4vw, 26px);
+    color: #fff;
+    background: var(--red);
+    border: 3px solid #ff9a9a;
+    text-shadow: 3px 3px 0 #5a0000;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.7);
+    cursor: pointer;
+  }
+  .tile:hover:not(:disabled) { filter: brightness(1.2); }
+  .tile:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.7); }
+  .tile.used,
+  .tile:disabled {
+    background: #5c5c66;
+    border-color: #808090;
+    color: #9a9aa5;
+    text-shadow: none;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  /* ---------- popups ---------- */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0, 0, 10, 0.78);
+    z-index: 50;
+  }
+  .overlay.open { display: flex; }
+  .dialog {
+    width: min(680px, 100%);
+    max-height: 92vh;
+    overflow: auto;
+    padding: 22px;
+    background: #0d0d3a;
+    border: 4px solid var(--yellow);
+    box-shadow: 8px 8px 0 #000;
+  }
+  .dlg-title {
+    font-size: clamp(9px, 1.6vw, 13px);
+    color: var(--cyan);
+    line-height: 1.6;
+  }
+  .dlg-q {
+    font-family: var(--text);
+    font-size: clamp(26px, 4.2vw, 38px);
+    line-height: 1.15;
+    margin: 18px 0;
+    word-break: break-word;
+  }
+  .answer { display: none; border-top: 3px dashed #4a4a9a; padding-top: 14px; margin-bottom: 14px; }
+  .answer.show { display: block; }
+  .answer .lbl { font-size: 10px; color: #6ee68a; }
+  .answer .txt {
+    font-family: var(--text);
+    font-size: clamp(26px, 4.2vw, 38px);
+    line-height: 1.15;
+    color: #6ee68a;
+    margin-top: 8px;
+    word-break: break-word;
+  }
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+  .btn {
+    font-family: var(--pixel);
+    font-size: 11px;
+    padding: 12px 16px;
+    color: #1a0a00;
+    border: 3px solid #000;
+    box-shadow: 4px 4px 0 #000;
+    cursor: pointer;
+  }
+  .btn:hover { filter: brightness(1.1); }
+  .btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 #000; }
+  .btn.orange { background: #f29a4a; }
+  .btn.red    { background: #ff4a4a; color: #fff; }
+  .btn.blue   { background: #5aa9f5; }
+  .menu-list { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
+
+  @media (max-width: 560px) {
+    .teams { gap: 8px; }
+    .team { padding: 8px; border-width: 3px; }
+    .board { gap: 10px; }
+    .hearts svg { width: 20px; height: 18px; }
+  }
+</style>
 </head>
 <body>
+  <div class="app">
+    <div class="topbar">
+      <div class="hearts" id="hearts" aria-hidden="true"></div>
+      <div class="pills">
+        <button class="pill" id="menuBtn" type="button">MENU</button>
+        <button class="pill" id="resetBtn" type="button">RESET</button>
+      </div>
+    </div>
 
-<div class="scoreboard-container">
-  <!-- TEAM 1 -->
-  <div class="team-card card-red">
-    <div class="team-header">TEAM 1</div>
-    <div class="score" id="score-1">0</div>
-    <div class="button-group">
-      <button class="btn btn-plus" onclick="updateScore(1, 100)">+</button>
-      <button class="btn btn-minus" onclick="updateScore(1, -100)">-</button>
+    <h1 id="title"></h1>
+    <p class="subtitle" id="subtitle"></p>
+
+    <div class="teams" id="teams"></div>
+    <div class="board" id="board"></div>
+  </div>
+
+  <!-- Question popup -->
+  <div class="overlay" id="qOverlay" role="dialog" aria-modal="true" aria-labelledby="qTitle">
+    <div class="dialog">
+      <div class="dlg-title" id="qTitle"></div>
+      <div class="dlg-q" id="qText"></div>
+      <div class="answer" id="answerBox">
+        <div class="lbl">ANSWER</div>
+        <div class="txt" id="aText"></div>
+      </div>
+      <div class="actions">
+        <button class="btn orange" id="showBtn" type="button">SHOW ANSWER</button>
+        <button class="btn red" id="closeBtn" type="button">CLOSE</button>
+      </div>
     </div>
   </div>
-  <!-- TEAM 2 -->
-  <div class="team-card card-green">
-    <div class="team-header">TEAM 2</div>
-    <div class="score" id="score-2">0</div>
-    <div class="button-group">
-      <button class="btn btn-plus" onclick="updateScore(2, 100)">+</button>
-      <button class="btn btn-minus" onclick="updateScore(2, -100)">-</button>
+
+  <!-- Menu popup -->
+  <div class="overlay" id="mOverlay" role="dialog" aria-modal="true" aria-label="Menu">
+    <div class="dialog">
+      <div class="dlg-title">MENU</div>
+      <div class="menu-list">
+        <button class="btn blue" id="mScores" type="button">RESET SCORES ONLY</button>
+        <button class="btn blue" id="mBoard" type="button">RESET QUESTIONS ONLY</button>
+        <button class="btn red" id="mAll" type="button">RESET EVERYTHING</button>
+        <button class="btn orange" id="mClose" type="button">CLOSE MENU</button>
+      </div>
     </div>
   </div>
-  <!-- TEAM 3 -->
-  <div class="team-card card-blue">
-    <div class="team-header">TEAM 3</div>
-    <div class="score" id="score-3">0</div>
-    <div class="button-group">
-      <button class="btn btn-plus" onclick="updateScore(3, 100)">+</button>
-      <button class="btn btn-minus" onclick="updateScore(3, -100)">-</button>
-    </div>
-  </div>
-  <!-- TEAM 4 -->
-  <div class="team-card card-yellow">
-    <div class="team-header">TEAM 4</div>
-    <div class="score" id="score-4">0</div>
-    <div class="button-group">
-      <button class="btn btn-plus" onclick="updateScore(4, 100)">+</button>
-      <button class="btn btn-minus" onclick="updateScore(4, -100)">-</button>
-    </div>
-  </div>
-</div>
 
 <script>
-  const scores = { 1: 0, 2: 0, 3: 0, 4: 0 };
-  function updateScore(teamId, amount) {
-    scores[teamId] += amount;
-    if (scores[teamId] < 0) scores[teamId] = 0;
-    document.getElementById(`score-${teamId}`).innerText = scores[teamId];
-  }
-</script>
+  /* =====================================================
+     EDIT HERE: title, team names, categories and questions
+     Each category needs 6 questions, in this order:
+     100, 200, 300, 400, 500, 600 points.
+     Format: ["question", "answer"]
+     ===================================================== */
+  const TITLE = "SKASPL1 JEOPARDY";
+  const SUBTITLE = "SKASPL1: Kalinangang Pilipino Kaligiran ng Paniniwala at Pananampalataya";
+  const TEAM_NAMES = ["TEAM 1", "TEAM 2", "TEAM 3", "TEAM 4"];
+  const POINTS = [100, 200, 300, 400, 500, 600];
 
+  const CATEGORIES = [
+    {
+      name: "CATEGORY 1",
+      questions: [
+        ["Sample question for 100 points?", "Sample answer 100"],
+        ["Sample question for 200 points?", "Sample answer 200"],
+        ["Sample question for 300 points?", "Sample answer 300"],
+        ["Sample question for 400 points?", "Sample answer 400"],
+        ["Sample question for 500 points?", "Sample answer 500"],
+        ["Sample question for 600 points?", "Sample answer 600"]
+      ]
+    },
+    {
+      name: "CATEGORY 2",
+      questions: [
+        ["Sample question for 100 points?", "Sample answer 100"],
+        ["Sample question for 200 points?", "Sample answer 200"],
+        ["Sample question for 300 points?", "Sample answer 300"],
+        ["Sample question for 400 points?", "Sample answer 400"],
+        ["Sample question for 500 points?", "Sample answer 500"],
+        ["Sample question for 600 points?", "Sample answer 600"]
+      ]
+    },
+    {
+      name: "CATEGORY 3",
+      questions: [
+        ["Sample question for 100 points?", "Sample answer 100"],
+        ["Sample question for 200 points?", "Sample answer 200"],
+        ["Sample question for 300 points?", "Sample answer 300"],
+        ["Sample question for 400 points?", "Sample answer 400"],
+        ["Sample question for 500 points?", "Sample answer 500"],
+        ["Sample question for 600 points?", "Sample answer 600"]
+      ]
+    },
+    {
+      name: "CATEGORY 4",
+      questions: [
+        ["Sample question for 100 points?", "Sample answer 100"],
+        ["Sample question for 200 points?", "Sample answer 200"],
+        ["Sample question for 300 points?", "Sample answer 300"],
+        ["Sample question for 400 points?", "Sample answer 400"],
+        ["Sample question for 500 points?", "Sample answer 500"],
+        ["Sample question for 600 points?", "Sample answer 600"]
+      ]
+    }
+  ];
+  /* ===================== end of editable part ===================== */
+
+  var TEAM_CLASSES = ["red", "green", "blue", "yellow"];
+  var STEP = 100;
+  var STORAGE_KEY = "skaspl1-jeopardy-v1";
+
+  var state = { scores: TEAM_NAMES.map(function () { return 0; }), used: {} };
+  var scoreEls = [];
+  var tileEls = {};
+  var currentKey = null;
+
+  function $(id) { return document.getElementById(id); }
+
+  /* ---------- save / load (remembers progress on refresh) ---------- */
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      var s = JSON.parse(raw);
+      if (Array.isArray(s.scores) && s.scores.length === TEAM_NAMES.length) {
+        state.scores = s.scores.map(function (n) { return Math.max(0, Number(n) || 0); });
+      }
+      if (s.used && typeof s.used === "object") state.used = s.used;
+    } catch (e) { /* storage unavailable: just start fresh */ }
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  /* ---------- pixel hearts ---------- */
+  function buildHearts() {
+    var rows = [
+      ".XX.XX.",
+      "XXXXXXX",
+      "XXXXXXX",
+      ".XXXXX.",
+      "..XXX..",
+      "...X..."
+    ];
+    var NS = "http://www.w3.org/2000/svg";
+    for (var h = 0; h < 5; h++) {
+      var svg = document.createElementNS(NS, "svg");
+      svg.setAttribute("viewBox", "0 0 7 6");
+      svg.setAttribute("shape-rendering", "crispEdges");
+      rows.forEach(function (row, y) {
+        row.split("").forEach(function (ch, x) {
+          if (ch !== "X") return;
+          var r = document.createElementNS(NS, "rect");
+          r.setAttribute("x", x);
+          r.setAttribute("y", y);
+          r.setAttribute("width", 1);
+          r.setAttribute("height", 1);
+          r.setAttribute("fill", (x === 1 && y === 1) ? "#ff9a9a" : "#e0182d");
+          svg.appendChild(r);
+        });
+      });
+      $("hearts").appendChild(svg);
+    }
+  }
+
+  /* ---------- team scoreboard ---------- */
+  function setScore(i, value) {
+    state.scores[i] = Math.max(0, value); // never below 0
+    var el = scoreEls[i];
+    el.textContent = state.scores[i];
+    el.classList.remove("bump");
+    void el.offsetWidth; // restart the animation
+    el.classList.add("bump");
+    save();
+  }
+
+  function buildTeams() {
+    var wrap = $("teams");
+    TEAM_NAMES.forEach(function (name, i) {
+      var card = document.createElement("div");
+      card.className = "team " + TEAM_CLASSES[i % TEAM_CLASSES.length];
+
+      var n = document.createElement("div");
+      n.className = "tname";
+      n.textContent = name;
+
+      var row = document.createElement("div");
+      row.className = "trow";
+
+      var score = document.createElement("div");
+      score.className = "score";
+      score.textContent = state.scores[i];
+      scoreEls[i] = score;
+
+      var btns = document.createElement("div");
+      btns.className = "tbtns";
+
+      var plus = document.createElement("button");
+      plus.type = "button";
+      plus.className = "round";
+      plus.textContent = "+";
+      plus.setAttribute("aria-label", "Add 100 to " + name);
+      plus.addEventListener("click", function () { setScore(i, state.scores[i] + STEP); });
+
+      var minus = document.createElement("button");
+      minus.type = "button";
+      minus.className = "round";
+      minus.textContent = "-";
+      minus.setAttribute("aria-label", "Subtract 100 from " + name);
+      minus.addEventListener("click", function () { setScore(i, state.scores[i] - STEP); });
+
+      btns.appendChild(plus);
+      btns.appendChild(minus);
+      row.appendChild(score);
+      row.appendChild(btns);
+      card.appendChild(n);
+      card.appendChild(row);
+      wrap.appendChild(card);
+    });
+  }
+
+  /* ---------- board ---------- */
+  function paintTile(key) {
+    var btn = tileEls[key];
+    if (!btn) return;
+    var used = !!state.used[key];
+    btn.classList.toggle("used", used);
+    btn.disabled = used;
+  }
+
+  function buildBoard() {
+    var board = $("board");
+    board.style.gridTemplateColumns = "repeat(" + CATEGORIES.length + ", 1fr)";
+
+    CATEGORIES.forEach(function (cat) {
+      var head = document.createElement("div");
+      head.className = "cat";
+      head.textContent = cat.name;
+      board.appendChild(head);
+    });
+
+    POINTS.forEach(function (pts, r) {
+      CATEGORIES.forEach(function (cat, c) {
+        var key = c + "-" + r;
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "tile";
+        btn.textContent = pts;
+        btn.setAttribute("aria-label", cat.name + " " + pts + " points");
+        btn.addEventListener("click", function () {
+          if (!state.used[key]) openQuestion(c, r, key);
+        });
+        tileEls[key] = btn;
+        board.appendChild(btn);
+        paintTile(key);
+      });
+    });
+  }
+
+  /* ---------- question popup ---------- */
+  function openQuestion(c, r, key) {
+    var cat = CATEGORIES[c];
+    var qa = (cat.questions && cat.questions[r]) || ["(No question set)", "(No answer set)"];
+    currentKey = key;
+    $("qTitle").textContent = cat.name + " - " + POINTS[r] + " POINTS";
+    $("qText").textContent = qa[0];
+    $("aText").textContent = qa[1];
+    $("answerBox").classList.remove("show");
+    $("showBtn").style.display = "";
+    $("qOverlay").classList.add("open");
+    $("showBtn").focus();
+  }
+
+  function showAnswer() {
+    $("answerBox").classList.add("show");
+    $("showBtn").style.display = "none";
+  }
+
+  function closeQuestion() {
+    if (currentKey !== null) {
+      state.used[currentKey] = true; // grey it out and lock it
+      paintTile(currentKey);
+      save();
+      currentKey = null;
+    }
+    $("qOverlay").classList.remove("open");
+  }
+
+  /* ---------- menu / reset ---------- */
+  function resetScores() {
+    state.scores = TEAM_NAMES.map(function () { return 0; });
+    scoreEls.forEach(function (el) { el.textContent = 0; });
+    save();
+  }
+  function resetBoard() {
+    state.used = {};
+    Object.keys(tileEls).forEach(paintTile);
+    save();
+  }
+  function resetAll() {
+    if (confirm("Reset all scores and questions?")) {
+      resetScores();
+      resetBoard();
+    }
+  }
+
+  function openMenu() { $("mOverlay").classList.add("open"); }
+  function closeMenu() { $("mOverlay").classList.remove("open"); }
+
+  /* ---------- start ---------- */
+  load();
+  $("title").textContent = TITLE;
+  $("subtitle").textContent = SUBTITLE;
+  document.title = TITLE;
+  buildHearts();
+  buildTeams();
+  buildBoard();
+
+  $("showBtn").addEventListener("click", showAnswer);
+  $("closeBtn").addEventListener("click", closeQuestion);
+  $("menuBtn").addEventListener("click", openMenu);
+  $("resetBtn").addEventListener("click", resetAll);
+  $("mClose").addEventListener("click", closeMenu);
+  $("mScores").addEventListener("click", function () {
+    if (confirm("Reset all team scores to 0?")) { resetScores(); closeMenu(); }
+  });
+  $("mBoard").addEventListener("click", function () {
+    if (confirm("Make all questions available again?")) { resetBoard(); closeMenu(); }
+  });
+  $("mAll").addEventListener("click", function () {
+    if (confirm("Reset all scores and questions?")) { resetScores(); resetBoard(); closeMenu(); }
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    if ($("qOverlay").classList.contains("open")) closeQuestion();
+    else if ($("mOverlay").classList.contains("open")) closeMenu();
+  });
+</script>
 </body>
 </html>
