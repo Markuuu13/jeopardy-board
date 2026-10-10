@@ -92,9 +92,25 @@
   .team.blue   { background: #5aa9f5; }
   .team.yellow { background: #e8c53a; }
   .team .tname {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0 0 6px;
+    font-family: var(--pixel);
     font-size: clamp(7px, 1.1vw, 11px);
-    padding-bottom: 6px;
+    color: #fff;
+    text-transform: uppercase;
+    background: transparent;
+    border: 0;
     border-bottom: 2px solid rgba(255, 255, 255, 0.85);
+    border-radius: 0;
+    outline: none;
+    cursor: text;
+  }
+  .team .tname:hover { border-bottom-style: dashed; }
+  .team .tname:focus {
+    border-bottom: 2px solid var(--yellow);
+    background: rgba(0, 0, 0, 0.12);
   }
   .team .trow {
     display: flex;
@@ -355,7 +371,13 @@
   var STEP = 100;
   var STORAGE_KEY = "skaspl1-jeopardy-v1";
 
-  var state = { scores: TEAM_NAMES.map(function () { return 0; }), used: {} };
+  var NAME_MAX = 16;
+  var state = {
+    names: TEAM_NAMES.slice(),
+    scores: TEAM_NAMES.map(function () { return 0; }),
+    used: {}
+  };
+  var nameEls = [];
   var scoreEls = [];
   var tileEls = {};
   var currentKey = null;
@@ -368,6 +390,11 @@
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
       var s = JSON.parse(raw);
+      if (Array.isArray(s.names) && s.names.length === TEAM_NAMES.length) {
+        state.names = s.names.map(function (n, i) {
+          return (typeof n === "string" && n.trim()) ? n.slice(0, NAME_MAX) : TEAM_NAMES[i];
+        });
+      }
       if (Array.isArray(s.scores) && s.scores.length === TEAM_NAMES.length) {
         state.scores = s.scores.map(function (n) { return Math.max(0, Number(n) || 0); });
       }
@@ -426,9 +453,16 @@
       var card = document.createElement("div");
       card.className = "team " + TEAM_CLASSES[i % TEAM_CLASSES.length];
 
-      var n = document.createElement("div");
+      var n = document.createElement("input");
+      n.type = "text";
       n.className = "tname";
-      n.textContent = name;
+      n.value = state.names[i];
+      n.maxLength = NAME_MAX;
+      n.spellcheck = false;
+      n.autocomplete = "off";
+      n.title = "Click to rename this team";
+      n.setAttribute("aria-label", "Team " + (i + 1) + " name (click to edit)");
+      nameEls[i] = n;
 
       var row = document.createElement("div");
       row.className = "trow";
@@ -445,15 +479,37 @@
       plus.type = "button";
       plus.className = "round";
       plus.textContent = "+";
-      plus.setAttribute("aria-label", "Add 100 to " + name);
       plus.addEventListener("click", function () { setScore(i, state.scores[i] + STEP); });
 
       var minus = document.createElement("button");
       minus.type = "button";
       minus.className = "round";
       minus.textContent = "-";
-      minus.setAttribute("aria-label", "Subtract 100 from " + name);
       minus.addEventListener("click", function () { setScore(i, state.scores[i] - STEP); });
+
+      function refreshLabels() {
+        plus.setAttribute("aria-label", "Add 100 to " + state.names[i]);
+        minus.setAttribute("aria-label", "Subtract 100 from " + state.names[i]);
+      }
+      refreshLabels();
+
+      // rename: saved as you type; an empty name goes back to the default
+      n.addEventListener("input", function () {
+        state.names[i] = n.value;
+        refreshLabels();
+        save();
+      });
+      n.addEventListener("blur", function () {
+        var v = n.value.trim();
+        if (!v) v = TEAM_NAMES[i];
+        n.value = v;
+        state.names[i] = v;
+        refreshLabels();
+        save();
+      });
+      n.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") n.blur();
+      });
 
       btns.appendChild(plus);
       btns.appendChild(minus);
@@ -543,10 +599,16 @@
     Object.keys(tileEls).forEach(paintTile);
     save();
   }
+  function resetNames() {
+    state.names = TEAM_NAMES.slice();
+    nameEls.forEach(function (el, i) { el.value = TEAM_NAMES[i]; });
+    save();
+  }
   function resetAll() {
-    if (confirm("Reset all scores and questions?")) {
+    if (confirm("Reset all scores, questions and team names?")) {
       resetScores();
       resetBoard();
+      resetNames();
     }
   }
 
@@ -574,7 +636,7 @@
     if (confirm("Make all questions available again?")) { resetBoard(); closeMenu(); }
   });
   $("mAll").addEventListener("click", function () {
-    if (confirm("Reset all scores and questions?")) { resetScores(); resetBoard(); closeMenu(); }
+    if (confirm("Reset all scores, questions and team names?")) { resetScores(); resetBoard(); resetNames(); closeMenu(); }
   });
 
   document.addEventListener("keydown", function (e) {
