@@ -381,6 +381,7 @@
   var scoreEls = [];
   var tileEls = {};
   var currentKey = null;
+  var answerShown = false; // true only after SHOW ANSWER was pressed for the open question
 
   function $(id) { return document.getElementById(id); }
 
@@ -564,6 +565,7 @@
     var cat = CATEGORIES[c];
     var qa = (cat.questions && cat.questions[r]) || ["(No question set)", "(No answer set)"];
     currentKey = key;
+    answerShown = false;
     $("qTitle").textContent = cat.name + " - " + POINTS[r] + " POINTS";
     $("qText").textContent = qa[0];
     $("aText").textContent = qa[1];
@@ -574,16 +576,22 @@
   }
 
   function showAnswer() {
+    answerShown = true;
     $("answerBox").classList.add("show");
     $("showBtn").style.display = "none";
   }
 
   function closeQuestion() {
     if (currentKey !== null) {
-      state.used[currentKey] = true; // grey it out and lock it
-      paintTile(currentKey);
-      save();
+      // Only grey out and lock the tile if the answer was revealed.
+      // If the popup is closed without revealing, the tile stays available.
+      if (answerShown) {
+        state.used[currentKey] = true;
+        paintTile(currentKey);
+        save();
+      }
       currentKey = null;
+      answerShown = false;
     }
     $("qOverlay").classList.remove("open");
   }
