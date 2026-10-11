@@ -283,7 +283,7 @@
     <div class="topbar">
       <div class="hearts" id="hearts" aria-hidden="true"></div>
       <div class="pills">
-        <button class="pill punish" id="punishBtn" type="button">PUNISHMENT</button>
+        <a class="pill punish" id="punishBtn" href="#" target="punishmentTab">PUNISHMENT</a>
         <button class="pill" id="menuBtn" type="button">MENU</button>
         <button class="pill" id="resetBtn" type="button">RESET</button>
       </div>
@@ -340,8 +340,6 @@
 
   // Paste the link of your Canva site page with the punishments between the quotes.
   // Example: "https://yourname.my.canva.site/punishments"
-  // On the Canva page, the "back to game" button must link to the game address + "?back=1"
-  // Example: "https://markuuu13.github.io/jeopardy-board/?back=1"
   const PUNISHMENT_URL = "https://sf10.my.canva.site/pilipinas-game-ka-na-ba/page-5-2";
 
   // OPTIONAL: load the questions from a Google Sheet so anyone can edit them
@@ -750,14 +748,6 @@
 
   /* ---------- start ---------- */
   load();
-
-  // Coming back from the punishment page: the Canva "back to game" button links
-  // to this page with ?back=1. This tab was opened by the game, so it closes itself
-  // and you land on the original game tab (nothing new is opened).
-  var CAME_BACK = false;
-  try { CAME_BACK = new URLSearchParams(location.search).has("back"); } catch (e) {}
-  if (CAME_BACK) window.close();
-
   $("title").textContent = TITLE;
   $("subtitle").textContent = SUBTITLE;
   document.title = TITLE;
@@ -769,19 +759,18 @@
     CATEGORIES = result.cats;
     buildBoard();
     if (result.notice) showNotice(result.notice); else hideNotice();
-    // only visible if the browser refused to close this tab
-    if (CAME_BACK) showNotice("YOU CAN CLOSE THIS TAB AND GO BACK TO THE FIRST GAME TAB.");
   });
 
-  // PUNISHMENT button: opens the Canva page in ONE reusable tab (the game stays open here)
-  $("punishBtn").addEventListener("click", function () {
-    if (!PUNISHMENT_URL) {
+  // PUNISHMENT button: opens the Canva page in a new tab (the game stays open here)
+  var punishBtn = $("punishBtn");
+  if (PUNISHMENT_URL) {
+    punishBtn.href = PUNISHMENT_URL;
+  } else {
+    punishBtn.addEventListener("click", function (e) {
+      e.preventDefault();
       alert("The punishment link is not set yet.\nOpen index.html and paste your Canva link into PUNISHMENT_URL.");
-      return;
-    }
-    var w = window.open(PUNISHMENT_URL, "punishmentTab");
-    if (w) { try { w.focus(); } catch (e) {} }
-  });
+    });
+  }
 
   $("showBtn").addEventListener("click", showAnswer);
   $("closeBtn").addEventListener("click", closeQuestion);
