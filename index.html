@@ -283,7 +283,7 @@
     <div class="topbar">
       <div class="hearts" id="hearts" aria-hidden="true"></div>
       <div class="pills">
-        <a class="pill punish" id="punishBtn" href="#" target="punishmentTab">PUNISHMENT</a>
+        <button class="pill punish" id="punishBtn" type="button">PUNISHMENT</button>
         <button class="pill" id="menuBtn" type="button">MENU</button>
         <button class="pill" id="resetBtn" type="button">RESET</button>
       </div>
@@ -338,8 +338,10 @@
   const TEAM_NAMES = ["TEAM 1", "TEAM 2", "TEAM 3", "TEAM 4"];
   const POINTS = [100, 200, 300, 400, 500, 600];
 
-  // Paste the link of your Canva site page with the punishments between the quotes.
-  // Example: "https://yourname.my.canva.site/punishments"
+  // PUNISHMENT button: the game goes to this Canva page IN THE SAME TAB (no new tab).
+  // On the Canva punishment pages, the "back to game" button must link to the game:
+  //   https://markuuu13.github.io/jeopardy-board/
+  // Scores, team names and played (grey) questions are saved in the browser and come back.
   const PUNISHMENT_URL = "https://sf10.my.canva.site/pilipinas-game-ka-na-ba/page-5-2";
 
   // OPTIONAL: load the questions from a Google Sheet so anyone can edit them
@@ -748,6 +750,7 @@
 
   /* ---------- start ---------- */
   load();
+
   $("title").textContent = TITLE;
   $("subtitle").textContent = SUBTITLE;
   document.title = TITLE;
@@ -761,16 +764,17 @@
     if (result.notice) showNotice(result.notice); else hideNotice();
   });
 
-  // PUNISHMENT button: opens the Canva page in a new tab (the game stays open here)
-  var punishBtn = $("punishBtn");
-  if (PUNISHMENT_URL) {
-    punishBtn.href = PUNISHMENT_URL;
-  } else {
-    punishBtn.addEventListener("click", function (e) {
-      e.preventDefault();
+  // PUNISHMENT button: goes to the Canva page in the SAME tab (no new tab).
+  // Scores, names and grey tiles are saved automatically, so they are still here
+  // when the Canva "back to game" button brings you back to this page.
+  $("punishBtn").addEventListener("click", function () {
+    if (!PUNISHMENT_URL) {
       alert("The punishment link is not set yet.\nOpen index.html and paste your Canva link into PUNISHMENT_URL.");
-    });
-  }
+      return;
+    }
+    save();
+    window.location.href = PUNISHMENT_URL;
+  });
 
   $("showBtn").addEventListener("click", showAnswer);
   $("closeBtn").addEventListener("click", closeQuestion);
